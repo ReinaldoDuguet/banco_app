@@ -1,0 +1,157 @@
+Estimado grupo, perdón por la trampa pero si quieren tomarlo como esqueleto  espero que sirva.
+
+public class Cliente {
+    private String nombre;
+    private String rut;
+    private CuentaCorriente cuentaCorriente;
+    private CuentaAhorro cuentaAhorro;
+
+    public Cliente(String nombre, String rut) {
+        this.nombre = nombre;
+        this.rut = rut;
+        this.cuentaCorriente = new CuentaCorriente();
+        this.cuentaAhorro = new CuentaAhorro();
+    }
+
+    public String getNombre() { return nombre; }
+    public String getRut() { return rut; }
+    public CuentaCorriente getCuentaCorriente() { return cuentaCorriente; }
+    public CuentaAhorro getCuentaAhorro() { return cuentaAhorro; }
+}
+
+
+
+
+import java.util.ArrayList;
+import java.util.List;
+
+public abstract class Cuenta {
+    protected double saldo;
+    protected String numeroCuenta;
+    protected List<Transaccion> historialTransacciones;
+
+    public Cuenta() {
+        this.saldo = 0;
+        this.historialTransacciones = new ArrayList<>();
+    }
+
+    public void depositar(double cantidad) {
+        saldo += cantidad;
+        agregarTransaccion("Depósito", cantidad);
+    }
+
+    public void transferir(Cuenta destino, double cantidad) {
+        if (saldo >= cantidad) {
+            saldo -= cantidad;
+            destino.depositar(cantidad);
+            agregarTransaccion("Transferencia a " + destino.numeroCuenta, cantidad);
+        } else {
+            System.out.println("Saldo insuficiente");
+        }
+    }
+
+    protected void agregarTransaccion(String tipo, double cantidad) {
+        if (historialTransacciones.size() >= 20) {
+            historialTransacciones.remove(0);
+        }
+        historialTransacciones.add(new Transaccion(tipo, cantidad));
+    }
+
+    public abstract void actualizarSaldoMensual();
+    
+    public void mostrarInformacion() {
+        System.out.println("Cuenta: " + numeroCuenta);
+        System.out.println("Saldo: " + saldo);
+        System.out.println("Historial de Transacciones:");
+        for (Transaccion transaccion : historialTransacciones) {
+            System.out.println(transaccion);
+        }
+    }
+}
+
+
+
+import java.time.LocalDateTime;
+
+public class Transaccion {
+    private String tipo;
+    private double cantidad;
+    private LocalDateTime fecha;
+
+    public Transaccion(String tipo, double cantidad) {
+        this.tipo = tipo;
+        this.cantidad = cantidad;
+        this.fecha = LocalDateTime.now();
+    }
+
+    @Override
+    public String toString() {
+        return "Transaccion [tipo=" + tipo + ", cantidad=" + cantidad + ", fecha=" + fecha + "]";
+    }
+}
+
+
+
+
+public class CuentaCorriente extends Cuenta {
+    private static final double COSTO_MANTENCION = 5.0;
+
+    @Override
+    public void actualizarSaldoMensual() {
+        saldo -= COSTO_MANTENCION;
+    }
+
+    @Override
+    public void transferir(Cuenta destino, double cantidad) {
+        double costoTransferencia = cantidad * 0.05;
+        if (saldo >= (cantidad + costoTransferencia)) {
+            saldo -= (cantidad + costoTransferencia);
+            destino.depositar(cantidad);
+            agregarTransaccion("Transferencia con costo a " + destino.numeroCuenta, cantidad);
+        } else {
+            System.out.println("Saldo insuficiente para cubrir la transferencia y el costo de administración");
+        }
+    }
+}
+
+
+
+
+public class CuentaAhorro extends Cuenta {
+    private static final double RENTABILIDAD = 0.02;
+
+    @Override
+    public void actualizarSaldoMensual() {
+        double totalDepositos = historialTransacciones.stream()
+                .filter(t -> t.tipo.equals("Depósito"))
+                .mapToDouble(t -> t.cantidad)
+                .limit(5)
+                .sum();
+        saldo += totalDepositos * RENTABILIDAD;
+    }
+
+    @Override
+    public void transferir(Cuenta destino, double cantidad) {
+        double penalizacion = cantidad * 0.02;
+        if (saldo >= (cantidad + penalizacion)) {
+            saldo -= (cantidad + penalizacion);
+            destino.depositar(cantidad);
+            agregarTransaccion("Transferencia con penalización a " + destino.numeroCuenta, cantidad);
+        } else {
+            System.out.println("Saldo insuficiente para cubrir la transferencia y la penalización");
+        }
+    }
+}
+
+
+public class BancoApp {
+    public static void main(String[] args) {
+        Cliente cliente1 = new Cliente("Juan Pérez", "12345678-9");
+        cliente1.getCuentaCorriente().depositar(1000);
+        cliente1.getCuentaCorriente().transferir(cliente1.getCuentaAhorro(), 200);
+        cliente1.getCuentaCorriente().actualizarSaldoMensual();
+        
+        cliente1.getCuentaCorriente().mostrarInformacion();
+        cliente1.getCuentaAhorro().mostrarInformacion();
+    }
+}
